@@ -1,0 +1,774 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cotizador DSX-8000</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+:root{
+  --chassis:#14171C; --chassis-2:#1D2128;
+  --yellow:#FFC933; --yellow-dim:#8a6d1c;
+  --signal:#39D98A; --danger:#E5533D;
+  --paper:#F6F5F1; --ink:#1B1D22; --muted:#6B7280;
+  --line:#E2E0D8; --card:#FFFFFF;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+::selection{background:var(--yellow);color:#1B1D22}
+.topbar{background:var(--chassis);color:#EDEDED;padding:14px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:4px solid var(--yellow);position:sticky;top:0;z-index:30;flex-wrap:wrap;gap:10px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:34px;height:34px;border-radius:4px;background:linear-gradient(135deg,var(--yellow),#e0a800);display:flex;align-items:center;justify-content:center;font-family:'Oswald';font-weight:700;color:#1B1D22;font-size:14px}
+.brand-text h1{font-family:'Oswald';font-weight:600;font-size:16px;margin:0;letter-spacing:.5px;text-transform:uppercase}
+.brand-text p{margin:0;font-size:11px;color:#9AA0AA;font-family:'IBM Plex Mono'}
+.readout{font-family:'IBM Plex Mono';background:#0B0D10;border:1px solid #2A2F38;border-radius:6px;padding:8px 16px;text-align:right;min-width:170px}
+.readout .lbl{font-size:9px;color:#8a8f99;text-transform:uppercase;letter-spacing:1px}
+.readout .val{font-size:19px;color:var(--signal);font-weight:600}
+.topbtns{display:flex;gap:8px}
+.topbtns button{font-family:'Inter';font-size:12px;font-weight:600;background:transparent;color:#D8DADF;border:1px solid #333944;padding:8px 12px;border-radius:6px;cursor:pointer}
+.topbtns button:hover{border-color:var(--yellow);color:var(--yellow)}
+.wrap{display:grid;grid-template-columns:1fr 400px;gap:0;max-width:1440px;margin:0 auto;align-items:start}
+@media (max-width:980px){.wrap{grid-template-columns:1fr}}
+.left{padding:22px 22px 100px}
+.right{position:sticky;top:70px;padding:22px 22px 22px 0;height:calc(100vh - 70px);overflow:auto}
+@media (max-width:980px){.right{position:static;height:auto;padding:0 22px 22px}}
+.eyebrow{font-family:'IBM Plex Mono';font-size:11px;color:var(--yellow-dim);text-transform:uppercase;letter-spacing:1.5px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.eyebrow::before{content:"";width:16px;height:2px;background:var(--yellow-dim)}
+.section-title{font-family:'Oswald';font-weight:600;font-size:16px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.3px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:18px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:4px}
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-family:'Inter';font-size:13.5px;background:#FCFCFA;color:var(--ink)}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--yellow);outline-offset:0;border-color:var(--yellow)}
+.field{margin-bottom:12px}
+.helptext{font-size:11.5px;color:var(--muted);margin:0 0 14px}
+
+/* mode toggle */
+.modetoggle{display:flex;gap:8px;margin-bottom:16px;background:#F0EEE7;padding:5px;border-radius:8px}
+.modetoggle button{flex:1;padding:9px 10px;border:none;border-radius:6px;background:transparent;font-family:'Inter';font-weight:600;font-size:12.5px;color:var(--muted);cursor:pointer}
+.modetoggle button.active{background:var(--chassis);color:var(--yellow)}
+
+/* config module */
+details.pricecfg{border:1px dashed var(--line);border-radius:8px;padding:0;margin-bottom:18px;background:#FBFAF7}
+details.pricecfg summary{cursor:pointer;padding:12px 16px;font-family:'IBM Plex Mono';font-size:12.5px;color:var(--ink);font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+details.pricecfg summary::-webkit-details-marker{display:none}
+details.pricecfg summary::before{content:"⚙";color:var(--yellow-dim)}
+.pricecfg-body{padding:4px 16px 18px}
+.cfg-sub{font-family:'IBM Plex Mono';font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin:16px 0 8px;border-bottom:1px solid var(--line);padding-bottom:5px}
+.cfg-sub:first-child{margin-top:4px}
+.price-row{display:grid;grid-template-columns:1fr 90px 60px;gap:8px;align-items:center;padding:5px 0;font-size:13px}
+.price-row input{padding:6px 8px;font-family:'IBM Plex Mono';font-size:12.5px;text-align:right}
+.price-row .u{color:var(--muted);font-size:11px}
+.pkg-row{display:grid;grid-template-columns:1.1fr repeat(4,70px) 70px;gap:6px;align-items:center;padding:4px 0;font-size:11.5px}
+.pkg-row input{padding:5px 6px;font-family:'IBM Plex Mono';font-size:11px;text-align:right}
+.pkg-head{display:grid;grid-template-columns:1.1fr repeat(4,70px) 70px;gap:6px;font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;padding-bottom:4px;font-family:'IBM Plex Mono'}
+.zona-row{display:grid;grid-template-columns:1fr 100px 100px;gap:8px;align-items:center;padding:6px 0;font-size:12.5px}
+.zona-row input{padding:6px 8px;font-family:'IBM Plex Mono';font-size:12px;text-align:right}
+
+/* line items */
+.lineitem{display:grid;grid-template-columns:1fr 90px 100px 32px;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#FCFCFA}
+.lineitem.pkgmode{grid-template-columns:1fr 100px 90px 100px 32px}
+.lineitem .sub{font-family:'IBM Plex Mono';font-size:13px;text-align:right;color:var(--ink);font-weight:600;padding-bottom:8px}
+.lineitem .extranote{grid-column:1/-1;font-size:10.5px;color:var(--muted);font-family:'IBM Plex Mono'}
+.taxi-row{display:grid;grid-template-columns:110px 70px 60px 90px 32px;gap:8px;align-items:end;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#FCFCFA}
+.taxi-row .nota{grid-column:1/-1}
+.taxi-row .sub{font-family:'IBM Plex Mono';font-size:13px;text-align:right;color:var(--ink);font-weight:600;padding-bottom:8px}
+@media (max-width:640px){.taxi-row{grid-template-columns:1fr 1fr}}
+.rmbtn{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer;height:36px;align-self:end}
+.addline{background:var(--chassis);color:var(--yellow);border:none;border-radius:6px;padding:9px 14px;font-family:'Inter';font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.addline:hover{background:#22262E}
+
+.addon-group{margin-bottom:16px}
+.addon-group h4{font-family:'IBM Plex Mono';font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 8px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.addon-row{display:grid;grid-template-columns:22px 1fr 90px 70px;gap:8px;align-items:center;padding:6px 0;font-size:13px}
+.addon-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--yellow-dim)}
+.addon-row input[type=number]{padding:6px 8px;font-family:'IBM Plex Mono';font-size:12px;text-align:right}
+.addon-row .name{color:var(--ink)}
+.addon-row.disabled .name{color:var(--muted)}
+
+/* travel card */
+.zona-select-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.travel-summary{margin-top:10px;padding:10px 12px;background:#FBFAF7;border:1px dashed var(--line);border-radius:8px;font-family:'IBM Plex Mono';font-size:12px}
+.travel-summary div{display:flex;justify-content:space-between;padding:2px 0}
+
+/* ticket */
+.ticket{background:var(--card);border:1px solid var(--line);border-radius:10px;font-family:'IBM Plex Mono';overflow:hidden}
+.ticket-head{background:var(--chassis);color:#fff;padding:14px 18px}
+.ticket-head .code{color:var(--yellow);font-weight:700;font-size:14px}
+.ticket-head .sub{font-size:10.5px;color:#9AA0AA;margin-top:2px}
+.ticket-body{padding:14px 18px}
+.ticket-body .meta{font-size:11.5px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+.ticket-line{display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)}
+.ticket-line.addon{padding-left:10px;color:var(--muted);font-size:11.5px}
+.ticket-line.travel{color:var(--yellow-dim)}
+.ticket-totals{margin-top:10px;padding-top:10px;border-top:1px solid var(--ink)}
+.ticket-totals div{display:flex;justify-content:space-between;font-size:12.5px;padding:3px 0}
+.ticket-totals .grand{font-size:17px;font-weight:700;color:var(--ink);border-top:1px dashed var(--line);margin-top:6px;padding-top:8px}
+.empty-note{color:var(--muted);font-size:12px;text-align:center;padding:20px 0;font-family:'Inter'}
+.ticket-actions{padding:14px 18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.btn{font-family:'Inter';font-weight:600;font-size:13px;padding:10px 14px;border-radius:7px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.btn-primary{background:var(--yellow);color:#1B1D22}
+.btn-primary:hover{background:#e0a800}
+.btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--ink)}
+
+.modal-bg{position:fixed;inset:0;background:rgba(20,23,28,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:10px;max-width:640px;width:100%;max-height:82vh;overflow:auto;padding:0}
+.modal-head{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.modal-head h3{font-family:'Oswald';margin:0;font-size:16px;text-transform:uppercase}
+.modal-head button{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+.modal-body{padding:10px 20px 20px}
+.hist-item{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line);gap:10px}
+.hist-item .hi{font-size:13px}
+.hist-item .hi b{font-family:'IBM Plex Mono';color:var(--yellow-dim)}
+.hist-item .hi .d{color:var(--muted);font-size:11.5px}
+.hist-actions{display:flex;gap:6px}
+.hist-actions button{font-size:11px;padding:6px 9px;border-radius:5px;border:1px solid var(--line);background:#fff;cursor:pointer}
+.hist-actions button:hover{border-color:var(--ink)}
+.infobanner{background:#FBF6E4;border:1px solid #E9DDA6;color:#6b5a10;font-size:11.5px;padding:10px 14px;border-radius:8px;margin-bottom:18px;line-height:1.5}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--chassis);color:var(--yellow);padding:10px 18px;border-radius:8px;font-family:'IBM Plex Mono';font-size:12.5px;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">DSX</div>
+    <div class="brand-text"><h1>Cotizador de Certificación</h1><p>Fluke Networks DSX-8000 · Puntos de datos</p></div>
+  </div>
+  <div class="topbtns"><button id="btnHist">Historial</button><button id="btnNew">Nueva cotización</button></div>
+  <div class="readout"><div class="lbl">Total estimado</div><div class="val" id="readoutTotal">S/ 0.00</div></div>
+</div>
+
+<div class="wrap">
+  <div class="left">
+
+    <div class="infobanner">El historial se guarda de forma persistente en tu cuenta (almacenamiento propio de este chat). Si prefieres una base de datos externa open source (Postgres vía Supabase, como en tus otras apps), puedo conectarla — solo necesito que crees el proyecto y me pases la URL y la anon key.</div>
+
+    <div class="card">
+      <p class="eyebrow">Datos del proyecto</p>
+      <div class="grid2">
+        <div class="field"><label>Cliente</label><input type="text" id="f_cliente" placeholder="Razón social / contacto"></div>
+        <div class="field"><label>Proyecto / Sede</label><input type="text" id="f_proyecto" placeholder="Ej. Edificio central, Torre B"></div>
+        <div class="field"><label>Ubicación</label><input type="text" id="f_ubicacion" placeholder="Ciudad / dirección"></div>
+        <div class="field"><label>Fecha</label><input type="date" id="f_fecha"></div>
+        <div class="field"><label>Escenario principal</label>
+          <select id="f_escenario">
+            <option>Cableado estructurado (oficinas / edificios / hospitales)</option>
+            <option>Data Center</option><option>Sistemas PoE</option><option>CCTV IP</option>
+            <option>WiFi (Access Points)</option><option>Automatización Industrial</option>
+            <option>Sistemas blindados (STP/FTP)</option><option>GigaREACH XL / Extended Reach</option>
+            <option>Otro / mixto</option>
+          </select>
+        </div>
+        <div class="field"><label>Válido por (días)</label><input type="number" id="f_validez" value="15" min="1"></div>
+      </div>
+    </div>
+
+    <details class="pricecfg">
+      <summary>Módulo de configuración de precios (estándares, paquetes, especiales, viáticos)</summary>
+      <div class="pricecfg-body">
+        <div class="cfg-sub">Precio por punto — modalidad "por punto"</div>
+        <div id="priceCfgStd"></div>
+        <div class="cfg-sub">Paquetes — modalidad "por paquete" (precio fijo + S//punto adicional)</div>
+        <div class="pkg-head"><span>Estándar</span><span>Paq. 10</span><span>Paq. 25</span><span>Paq. 50</span><span>Paq. 100</span><span>Pto. adic.</span></div>
+        <div id="priceCfgPkg"></div>
+        <div class="cfg-sub">Servicios especiales</div>
+        <div id="priceCfgAddon"></div>
+        <div class="cfg-sub">Zonas — viáticos y traslado</div>
+        <div id="priceCfgZonas"></div>
+        <div class="cfg-sub">Tarifas de referencia — taxi por app (orientativas, edítalas según la ciudad)</div>
+        <div class="pkg-head" style="grid-template-columns:1fr 90px 90px"><span>App</span><span>Base S/</span><span>S//km</span></div>
+        <div id="priceCfgTaxi"></div>
+      </div>
+    </details>
+
+    <div class="card">
+      <p class="eyebrow">Modalidad de cotización</p>
+      <div class="modetoggle">
+        <button id="modoPunto" class="active">Por punto + especiales</button>
+        <button id="modoPaquete">Por paquete</button>
+      </div>
+      <h2 class="section-title" id="lineTitle">Líneas por punto</h2>
+      <div id="lineItems"></div>
+      <button class="addline" id="btnAddLine">+ Agregar estándar</button>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Servicios especiales</p>
+      <h2 class="section-title">Pruebas y servicios adicionales</h2>
+      <p class="helptext">Aplican en cualquier modalidad. Marca lo que corresponda; el precio se calcula según la cantidad indicada.</p>
+      <div id="addonGroups"></div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Viáticos y traslado</p>
+      <h2 class="section-title">Zona de trabajo</h2>
+      <p class="helptext">El equipo DSX-8000 es de alto valor: fuera de Lima se considera traslado con las medidas de seguridad correspondientes, además de viáticos por día en campo.</p>
+      <div class="zona-select-row">
+        <div class="field"><label>Zona</label>
+          <select id="f_zona"><option value="lima">Lima Metropolitana</option><option value="limaAlejada">Lima — zona alejada</option><option value="provincia">Provincia</option></select>
+        </div>
+        <div class="field"><label>Días en campo</label><input type="number" id="f_dias" value="0" min="0"></div>
+      </div>
+      <div class="travel-summary" id="travelSummary"></div>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Transporte del equipo</p>
+      <h2 class="section-title">Traslados en taxi por app</h2>
+      <p class="helptext">Por seguridad, el DSX-8000 se traslada en taxi por aplicativo (no transporte público) en cada ciudad. Agrega cada recorrido con el kilometraje aproximado; el costo se estima con la tarifa de referencia de la app elegida.</p>
+      <div id="taxiTrips"></div>
+      <button class="addline" id="btnAddTaxi">+ Agregar traslado</button>
+    </div>
+
+    <div class="card">
+      <p class="eyebrow">Ajustes finales</p>
+      <h2 class="section-title">Descuento, IGV y moneda</h2>
+      <div class="grid3">
+        <div class="field"><label>Descuento (%)</label><input type="number" id="f_desc" value="0" min="0" max="100"></div>
+        <div class="field"><label>IGV (%)</label><input type="number" id="f_igv" value="18" min="0" max="100"></div>
+        <div class="field"><label>Moneda</label><select id="f_moneda"><option value="S/">Soles (S/)</option><option value="US$">Dólares (US$)</option></select></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="right">
+    <div class="ticket" id="ticket">
+      <div class="ticket-head"><div class="code" id="ticketCode">COT-DSX-0001</div><div class="sub" id="ticketDate">—</div></div>
+      <div class="ticket-body" id="ticketBody"></div>
+      <div class="ticket-actions">
+        <button class="btn btn-primary" id="btnPdf">Descargar PDF</button>
+        <button class="btn btn-ghost" id="btnSave">Guardar en historial</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="histModal">
+  <div class="modal">
+    <div class="modal-head"><h3>Historial de cotizaciones</h3><button id="closeHist">×</button></div>
+    <div class="modal-body" id="histBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const STD_DEFAULTS = [
+  ["cat3","Cat 3",25],["cat5e","Cat 5e",30],["cat6","Cat 6",35],["cat6a","Cat 6A",45],["cat8","Cat 8",70],
+  ["isoc","ISO Clase C",25],["isod","ISO Clase D",30],["isoe","ISO Clase E",35],["isoea","ISO Clase EA",45],
+  ["isof","ISO Clase F",55],["isofa","ISO Clase FA",60],["isoi","ISO Clase I",70],["isoii","ISO Clase II",80]
+];
+const PKG_SIZES = [10,25,50,100];
+const ADDON_GROUPS = [
+  {g:"Data Center / Alta velocidad", items:[
+    ["anext","Alien Crosstalk (PS ANEXT / PS AACR-F)","punto",15],["shield","Shield Integrity","punto",10],
+    ["shielddist","Distancia a falla del blindaje","punto",8],["tcl","TCL","punto",8],["eltctl","ELTCTL","punto",8],
+    ["cdnext","CDNEXT","punto",8],["cmrl","CMRL","punto",8],["speed","Validación 25GBASE-T / 40GBASE-T","punto",20],
+  ]},
+  {g:"Sistemas PoE / PoE++", items:[
+    ["pru","Pair Resistance Unbalance","punto",6],["ppru","Pair-to-Pair Resistance Unbalance","punto",6],
+    ["dcloop","DC Loop Resistance (PoE/PoE++)","punto",6],
+  ]},
+  {g:"MPTL / CCTV / WiFi", items:[["mptl","MPTL (Modular Plug Terminated Link)","punto",10],["mptlpoe","PoE en punto MPTL","punto",5]]},
+  {g:"Sistemas blindados (STP/FTP)", items:[["contblind","Continuidad del blindaje","punto",8]]},
+  {g:"Automatización Industrial", items:[["m12","Conector M12 (accesorio)","fijo",25],["cableind","Cable industrial (accesorio)","fijo",15]]},
+  {g:"GigaREACH XL / Extended Reach", items:[["giga","Límites CommScope Extended Reach (150–200 m)","punto",15]]},
+  {g:"Componentes individuales", items:[["single","Prueba Single-Ended (patch cords, jacks, carrete)","punto",12]]},
+  {g:"Conectores especiales", items:[["tera","Adaptador TERA","fijo",20],["gg45","Adaptador GG45","fijo",20],["coax","Adaptador Coaxial","fijo",20]]},
+  {g:"Diagnóstico avanzado", items:[["hdtdr","HDTDR/HDTDX + diagnóstico gráfico","punto",18]]},
+];
+const ZONA_DEFAULTS = {
+  lima:{label:"Lima Metropolitana",traslado:0,viaticoDia:0},
+  limaAlejada:{label:"Lima — zona alejada",traslado:350,viaticoDia:120},
+  provincia:{label:"Provincia",traslado:900,viaticoDia:180},
+};
+// Tarifas de referencia (aprox.) de apps de taxi para orientar el costo de traslado seguro del equipo por ciudad.
+// Son valores editables — ajústalos a lo que cobren realmente en la zona de trabajo.
+const TAXI_APP_DEFAULTS = {
+  uber:{label:"Uber", base:6, porKm:1.10},
+  cabify:{label:"Cabify", base:8, porKm:2.20},
+  indriver:{label:"InDriver", base:5, porKm:1.30},
+  otro:{label:"Otro / taxi local", base:6, porKm:1.50},
+};
+
+function defaultPkgFor(precioPunto){
+  const round5 = n => Math.round(n/5)*5;
+  return {
+    10: round5(precioPunto*10*0.95),
+    25: round5(precioPunto*25*0.92),
+    50: round5(precioPunto*50*0.90),
+    100: round5(precioPunto*100*0.88),
+    extra: precioPunto,
+  };
+}
+
+let state = {
+  modo:'punto',
+  prices: Object.fromEntries(STD_DEFAULTS.map(s=>[s[0],s[2]])),
+  pkg: Object.fromEntries(STD_DEFAULTS.map(s=>[s[0],defaultPkgFor(s[2])])),
+  addonPrices: {},
+  zonas: JSON.parse(JSON.stringify(ZONA_DEFAULTS)),
+  taxiApps: JSON.parse(JSON.stringify(TAXI_APP_DEFAULTS)),
+  taxiTrips: [{app:"cabify", km:8, viajes:2, nota:"Aeropuerto/hotel — sede"}],
+  lines: [{std:"cat6a", puntos:24}],
+  pkgLines: [{std:"cat6a", paquete:25, puntosReales:25}],
+  addons: {},
+  seq: 1,
+};
+ADDON_GROUPS.forEach(g=>g.items.forEach(it=>{ state.addonPrices[it[0]] = it[3]; }));
+
+const $ = sel => document.querySelector(sel);
+const fmt = n => (isNaN(n)?0:n).toLocaleString('es-PE',{minimumFractionDigits:2,maximumFractionDigits:2});
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function stdLabel(k){ const f = STD_DEFAULTS.find(s=>s[0]===k); return f?f[1]:k; }
+
+// ---------- config renderers ----------
+function renderPriceCfg(){
+  $('#priceCfgStd').innerHTML = STD_DEFAULTS.map(([k,label])=>`
+    <div class="price-row"><span>${label}</span><input type="number" data-std="${k}" class="stdPrice" value="${state.prices[k]}" min="0" step="0.5"><span class="u">S//pto</span></div>`).join('');
+  $('#priceCfgStd').querySelectorAll('.stdPrice').forEach(inp=>inp.addEventListener('input', e=>{ state.prices[e.target.dataset.std]=parseFloat(e.target.value)||0; render(); }));
+
+  $('#priceCfgPkg').innerHTML = STD_DEFAULTS.map(([k,label])=>{
+    const p = state.pkg[k];
+    return `<div class="pkg-row">
+      <span>${label}</span>
+      <input type="number" data-std="${k}" data-f="10" class="pkgPrice" value="${p[10]}" min="0" step="5">
+      <input type="number" data-std="${k}" data-f="25" class="pkgPrice" value="${p[25]}" min="0" step="5">
+      <input type="number" data-std="${k}" data-f="50" class="pkgPrice" value="${p[50]}" min="0" step="5">
+      <input type="number" data-std="${k}" data-f="100" class="pkgPrice" value="${p[100]}" min="0" step="5">
+      <input type="number" data-std="${k}" data-f="extra" class="pkgPrice" value="${p.extra}" min="0" step="0.5">
+    </div>`;
+  }).join('');
+  $('#priceCfgPkg').querySelectorAll('.pkgPrice').forEach(inp=>inp.addEventListener('input', e=>{
+    const std=e.target.dataset.std, f=e.target.dataset.f;
+    state.pkg[std][f==='extra'?'extra':f] = parseFloat(e.target.value)||0;
+    render();
+  }));
+
+  $('#priceCfgAddon').innerHTML = ADDON_GROUPS.map(g=>g.items.map(([k,label,tipo])=>`
+    <div class="price-row"><span>${label}</span><input type="number" data-k="${k}" class="addonPriceCfg" value="${state.addonPrices[k]}" min="0" step="0.5"><span class="u">${tipo==='fijo'?'S//serv.':'S//pto'}</span></div>`).join('')).join('');
+  $('#priceCfgAddon').querySelectorAll('.addonPriceCfg').forEach(inp=>inp.addEventListener('input', e=>{ state.addonPrices[e.target.dataset.k]=parseFloat(e.target.value)||0; render(); }));
+
+  $('#priceCfgZonas').innerHTML = Object.entries(state.zonas).map(([k,z])=>`
+    <div class="zona-row"><span>${z.label}</span>
+      <input type="number" data-z="${k}" data-f="traslado" class="zonaCfg" value="${z.traslado}" min="0" step="10">
+      <input type="number" data-z="${k}" data-f="viaticoDia" class="zonaCfg" value="${z.viaticoDia}" min="0" step="10">
+    </div>`).join('');
+  $('#priceCfgZonas').querySelectorAll('.zonaCfg').forEach(inp=>inp.addEventListener('input', e=>{
+    state.zonas[e.target.dataset.z][e.target.dataset.f] = parseFloat(e.target.value)||0; render();
+  }));
+
+  $('#priceCfgTaxi').innerHTML = Object.entries(state.taxiApps).map(([k,a])=>`
+    <div class="zona-row" style="grid-template-columns:1fr 90px 90px"><span>${a.label}</span>
+      <input type="number" data-a="${k}" data-f="base" class="taxiCfg" value="${a.base}" min="0" step="0.5">
+      <input type="number" data-a="${k}" data-f="porKm" class="taxiCfg" value="${a.porKm}" min="0" step="0.05">
+    </div>`).join('');
+  $('#priceCfgTaxi').querySelectorAll('.taxiCfg').forEach(inp=>inp.addEventListener('input', e=>{
+    state.taxiApps[e.target.dataset.a][e.target.dataset.f] = parseFloat(e.target.value)||0; render();
+  }));
+}
+
+// ---------- line items: modo punto ----------
+function renderLinesPunto(){
+  const c = $('#lineItems');
+  c.innerHTML = state.lines.map((l,i)=>{
+    const price = state.prices[l.std]||0, sub = price*(l.puntos||0);
+    const options = STD_DEFAULTS.map(([k,label])=>`<option value="${k}" ${k===l.std?'selected':''}>${label}</option>`).join('');
+    return `<div class="lineitem">
+      <div><label>Estándar</label><select data-i="${i}" class="lnStd">${options}</select></div>
+      <div><label>Puntos</label><input type="number" data-i="${i}" class="lnPts" min="0" value="${l.puntos}"></div>
+      <div class="sub">S/ ${fmt(sub)}</div>
+      <button class="rmbtn" data-i="${i}" title="Quitar">×</button>
+    </div>`;
+  }).join('') || `<p class="empty-note">Agrega al menos un estándar.</p>`;
+  c.querySelectorAll('.lnStd').forEach(el=>el.addEventListener('change', e=>{ state.lines[+e.target.dataset.i].std=e.target.value; render(); }));
+  c.querySelectorAll('.lnPts').forEach(el=>el.addEventListener('input', e=>{ state.lines[+e.target.dataset.i].puntos=parseInt(e.target.value)||0; render(); }));
+  c.querySelectorAll('.rmbtn').forEach(el=>el.addEventListener('click', e=>{ state.lines.splice(+e.target.dataset.i,1); render(); }));
+}
+
+// ---------- line items: modo paquete ----------
+function renderLinesPaquete(){
+  const c = $('#lineItems');
+  c.innerHTML = state.pkgLines.map((l,i)=>{
+    const pkgCfg = state.pkg[l.std]||defaultPkgFor(state.prices[l.std]||0);
+    const pkgPrice = pkgCfg[l.paquete]||0;
+    const extraPts = Math.max(0, (l.puntosReales||0) - l.paquete);
+    const sub = pkgPrice + extraPts*(pkgCfg.extra||0);
+    const options = STD_DEFAULTS.map(([k,label])=>`<option value="${k}" ${k===l.std?'selected':''}>${label}</option>`).join('');
+    const pkgOptions = PKG_SIZES.map(sz=>`<option value="${sz}" ${sz===l.paquete?'selected':''}>${sz} pts</option>`).join('');
+    return `<div class="lineitem pkgmode">
+      <div><label>Estándar</label><select data-i="${i}" class="lnStdP">${options}</select></div>
+      <div><label>Paquete</label><select data-i="${i}" class="lnPkg">${pkgOptions}</select></div>
+      <div><label>Puntos reales</label><input type="number" data-i="${i}" class="lnReal" min="0" value="${l.puntosReales}"></div>
+      <div class="sub">S/ ${fmt(sub)}</div>
+      <button class="rmbtn" data-i="${i}" title="Quitar">×</button>
+      ${extraPts>0?`<div class="extranote">Paquete ${l.paquete} pts: S/ ${fmt(pkgPrice)} + ${extraPts} pts adicionales × S/ ${fmt(pkgCfg.extra)} = S/ ${fmt(extraPts*pkgCfg.extra)}</div>`:''}
+    </div>`;
+  }).join('') || `<p class="empty-note">Agrega al menos un paquete.</p>`;
+  c.querySelectorAll('.lnStdP').forEach(el=>el.addEventListener('change', e=>{ state.pkgLines[+e.target.dataset.i].std=e.target.value; render(); }));
+  c.querySelectorAll('.lnPkg').forEach(el=>el.addEventListener('change', e=>{ state.pkgLines[+e.target.dataset.i].paquete=parseInt(e.target.value); render(); }));
+  c.querySelectorAll('.lnReal').forEach(el=>el.addEventListener('input', e=>{ state.pkgLines[+e.target.dataset.i].puntosReales=parseInt(e.target.value)||0; render(); }));
+  c.querySelectorAll('.rmbtn').forEach(el=>el.addEventListener('click', e=>{ state.pkgLines.splice(+e.target.dataset.i,1); render(); }));
+}
+
+function renderLines(){ state.modo==='punto' ? renderLinesPunto() : renderLinesPaquete(); }
+
+// ---------- taxi trips ----------
+function taxiTripCost(trip){
+  const a = state.taxiApps[trip.app] || state.taxiApps.otro;
+  return (a.base + (trip.km||0)*a.porKm) * (trip.viajes||0);
+}
+function renderTaxiTrips(){
+  const c = $('#taxiTrips');
+  c.innerHTML = state.taxiTrips.map((tr,i)=>{
+    const sub = taxiTripCost(tr);
+    const appOptions = Object.entries(state.taxiApps).map(([k,a])=>`<option value="${k}" ${k===tr.app?'selected':''}>${a.label}</option>`).join('');
+    return `<div class="taxi-row">
+      <div><label>App</label><select data-i="${i}" class="txApp">${appOptions}</select></div>
+      <div><label>Km aprox.</label><input type="number" data-i="${i}" class="txKm" min="0" step="0.5" value="${tr.km}"></div>
+      <div><label>Viajes</label><input type="number" data-i="${i}" class="txViajes" min="0" value="${tr.viajes}"></div>
+      <div class="sub">S/ ${fmt(sub)}</div>
+      <button class="rmbtn" data-i="${i}" title="Quitar">×</button>
+      <div class="nota"><input type="text" data-i="${i}" class="txNota" placeholder="Ej. Aeropuerto — sede del cliente" value="${tr.nota||''}"></div>
+    </div>`;
+  }).join('') || `<p class="empty-note">Sin traslados en taxi agregados.</p>`;
+  c.querySelectorAll('.txApp').forEach(el=>el.addEventListener('change', e=>{ state.taxiTrips[+e.target.dataset.i].app=e.target.value; render(); }));
+  c.querySelectorAll('.txKm').forEach(el=>el.addEventListener('input', e=>{ state.taxiTrips[+e.target.dataset.i].km=parseFloat(e.target.value)||0; render(); }));
+  c.querySelectorAll('.txViajes').forEach(el=>el.addEventListener('input', e=>{ state.taxiTrips[+e.target.dataset.i].viajes=parseInt(e.target.value)||0; render(); }));
+  c.querySelectorAll('.txNota').forEach(el=>el.addEventListener('input', e=>{ state.taxiTrips[+e.target.dataset.i].nota=e.target.value; renderTicket(); }));
+  c.querySelectorAll('.rmbtn').forEach(el=>el.addEventListener('click', e=>{ state.taxiTrips.splice(+e.target.dataset.i,1); render(); }));
+}
+$('#btnAddTaxi').addEventListener('click', ()=>{ state.taxiTrips.push({app:"uber", km:5, viajes:1, nota:""}); render(); });
+
+// ---------- addons ----------
+function totalPuntos(){
+  return state.modo==='punto'
+    ? state.lines.reduce((s,l)=>s+(l.puntos||0),0)
+    : state.pkgLines.reduce((s,l)=>s+(l.puntosReales||0),0);
+}
+function renderAddons(){
+  const c = $('#addonGroups');
+  c.innerHTML = ADDON_GROUPS.map(g=>`<div class="addon-group"><h4>${g.g}</h4>${g.items.map(([k,label,tipo])=>{
+    const a = state.addons[k] || {on:false, qty: totalPuntos()};
+    return `<div class="addon-row ${a.on?'':'disabled'}">
+      <input type="checkbox" class="aOn" data-k="${k}" ${a.on?'checked':''}>
+      <span class="name">${label}</span>
+      <input type="number" class="aQty" data-k="${k}" min="0" value="${a.qty}" ${a.on?'':'disabled'}>
+      <input type="number" class="aPrice" data-k="${k}" min="0" step="0.5" value="${state.addonPrices[k]}" title="S/ por ${tipo==='fijo'?'servicio':'punto'}">
+    </div>`;
+  }).join('')}</div>`).join('');
+  c.querySelectorAll('.aOn').forEach(el=>el.addEventListener('change', e=>{
+    const k=e.target.dataset.k;
+    state.addons[k] = state.addons[k] || {on:false, qty: totalPuntos()};
+    state.addons[k].on = e.target.checked;
+    if(!state.addons[k].qty) state.addons[k].qty = totalPuntos();
+    render();
+  }));
+  c.querySelectorAll('.aQty').forEach(el=>el.addEventListener('input', e=>{
+    const k=e.target.dataset.k; state.addons[k]=state.addons[k]||{on:false,qty:0}; state.addons[k].qty=parseInt(e.target.value)||0; renderTicket();
+  }));
+  c.querySelectorAll('.aPrice').forEach(el=>el.addEventListener('input', e=>{ state.addonPrices[e.target.dataset.k]=parseFloat(e.target.value)||0; renderTicket(); }));
+}
+
+// ---------- travel ----------
+function computeTravel(){
+  const z = state.zonas[$('#f_zona').value] || state.zonas.lima;
+  const dias = parseInt($('#f_dias').value)||0;
+  const viaticos = z.viaticoDia*dias;
+  const taxiTotal = state.taxiTrips.reduce((s,tr)=>s+taxiTripCost(tr),0);
+  return {zonaLabel:z.label, traslado:z.traslado, viaticos, dias, taxiTotal, total: z.traslado+viaticos+taxiTotal};
+}
+function renderTravelSummary(){
+  const t = computeTravel();
+  const moneda = $('#f_moneda').value;
+  $('#travelSummary').innerHTML = `
+    <div><span>Traslado y seguridad de equipo (${t.zonaLabel})</span><span>${moneda} ${fmt(t.traslado)}</span></div>
+    <div><span>Viáticos (${t.dias} día${t.dias===1?'':'s'})</span><span>${moneda} ${fmt(t.viaticos)}</span></div>
+    <div><span>Taxis por app (${state.taxiTrips.length} traslado${state.taxiTrips.length===1?'':'s'})</span><span>${moneda} ${fmt(t.taxiTotal)}</span></div>
+    <div style="font-weight:700;border-top:1px dashed var(--line);margin-top:4px;padding-top:4px"><span>Subtotal viáticos/traslado</span><span>${moneda} ${fmt(t.total)}</span></div>`;
+}
+
+// ---------- totals ----------
+function computeTotals(){
+  let lineSubs = [], lineTotal = 0;
+  if(state.modo==='punto'){
+    lineSubs = state.lines.map(l=>({std:l.std, qtyLabel:`${l.puntos} pto`, price: state.prices[l.std]||0, sub:(state.prices[l.std]||0)*(l.puntos||0)}));
+  } else {
+    lineSubs = state.pkgLines.map(l=>{
+      const pkgCfg = state.pkg[l.std]||defaultPkgFor(state.prices[l.std]||0);
+      const pkgPrice = pkgCfg[l.paquete]||0;
+      const extraPts = Math.max(0,(l.puntosReales||0)-l.paquete);
+      const sub = pkgPrice+extraPts*(pkgCfg.extra||0);
+      return {std:l.std, qtyLabel:`paq.${l.paquete}${extraPts>0?` +${extraPts}pt`:''}`, price:pkgPrice, sub};
+    });
+  }
+  lineTotal = lineSubs.reduce((s,l)=>s+l.sub,0);
+
+  const addonList = [];
+  ADDON_GROUPS.forEach(g=>g.items.forEach(([k,label])=>{
+    const a = state.addons[k];
+    if(a && a.on){ const price=state.addonPrices[k]||0, qty=a.qty||0; addonList.push({k,label,price,qty,sub:price*qty}); }
+  }));
+  const addonTotal = addonList.reduce((s,a)=>s+a.sub,0);
+  const travel = computeTravel();
+
+  const subtotal = lineTotal + addonTotal + travel.total;
+  const descPct = parseFloat($('#f_desc').value)||0;
+  const igvPct = parseFloat($('#f_igv').value)||0;
+  const desc = subtotal*descPct/100;
+  const base = subtotal-desc;
+  const igv = base*igvPct/100;
+  const total = base+igv;
+  return {lineSubs, addonList, travel, lineTotal, addonTotal, subtotal, desc, descPct, igv, igvPct, base, total};
+}
+
+function renderTicket(){
+  const t = computeTotals();
+  const moneda = $('#f_moneda').value;
+  $('#ticketCode').textContent = `COT-DSX-${String(state.seq).padStart(4,'0')}`;
+  $('#ticketDate').textContent = `Emitida ${$('#f_fecha').value || new Date().toISOString().slice(0,10)}`;
+  let html = `<div class="meta">Cliente: ${$('#f_cliente').value||'—'}<br>Proyecto: ${$('#f_proyecto').value||'—'}<br>Modalidad: ${state.modo==='punto'?'Por punto':'Por paquete'} · Puntos: ${totalPuntos()}</div>`;
+  if(t.lineSubs.length===0){ html += `<div class="empty-note">Agrega certificaciones para ver el detalle.</div>`; }
+  else t.lineSubs.forEach(l=>{ html += `<div class="ticket-line"><span>${stdLabel(l.std)} — ${l.qtyLabel}</span><span>${moneda} ${fmt(l.sub)}</span></div>`; });
+  t.addonList.forEach(a=>{ html += `<div class="ticket-line addon"><span>+ ${a.label} × ${a.qty}</span><span>${moneda} ${fmt(a.sub)}</span></div>`; });
+  if(t.travel.traslado+t.travel.viaticos>0){ html += `<div class="ticket-line travel"><span>Viáticos / traslado (${t.travel.zonaLabel})</span><span>${moneda} ${fmt(t.travel.traslado+t.travel.viaticos)}</span></div>`; }
+  if(t.travel.taxiTotal>0){ html += `<div class="ticket-line travel"><span>Taxis por app (${state.taxiTrips.length})</span><span>${moneda} ${fmt(t.travel.taxiTotal)}</span></div>`; }
+  html += `<div class="ticket-totals">
+    <div><span>Subtotal</span><span>${moneda} ${fmt(t.subtotal)}</span></div>
+    ${t.descPct>0?`<div><span>Descuento (${t.descPct}%)</span><span>-${moneda} ${fmt(t.desc)}</span></div>`:''}
+    <div><span>IGV (${t.igvPct}%)</span><span>${moneda} ${fmt(t.igv)}</span></div>
+    <div class="grand"><span>TOTAL</span><span>${moneda} ${fmt(t.total)}</span></div>
+  </div>`;
+  $('#ticketBody').innerHTML = html;
+  $('#readoutTotal').textContent = `${moneda} ${fmt(t.total)}`;
+  return t;
+}
+
+function render(){ renderPriceCfg(); renderLines(); renderAddons(); renderTaxiTrips(); renderTravelSummary(); renderTicket(); }
+
+// ---------- mode toggle ----------
+$('#modoPunto').addEventListener('click', ()=>{ state.modo='punto'; $('#modoPunto').classList.add('active'); $('#modoPaquete').classList.remove('active'); $('#lineTitle').textContent='Líneas por punto'; $('#btnAddLine').textContent='+ Agregar estándar'; render(); });
+$('#modoPaquete').addEventListener('click', ()=>{ state.modo='paquete'; $('#modoPaquete').classList.add('active'); $('#modoPunto').classList.remove('active'); $('#lineTitle').textContent='Líneas por paquete'; $('#btnAddLine').textContent='+ Agregar paquete'; render(); });
+
+$('#btnAddLine').addEventListener('click', ()=>{
+  if(state.modo==='punto'){
+    const used = state.lines.map(l=>l.std);
+    const next = STD_DEFAULTS.find(s=>!used.includes(s[0])) || STD_DEFAULTS[0];
+    state.lines.push({std:next[0], puntos:24});
+  } else {
+    const used = state.pkgLines.map(l=>l.std);
+    const next = STD_DEFAULTS.find(s=>!used.includes(s[0])) || STD_DEFAULTS[0];
+    state.pkgLines.push({std:next[0], paquete:25, puntosReales:25});
+  }
+  render();
+});
+
+['f_desc','f_igv','f_moneda','f_cliente','f_proyecto','f_fecha','f_zona','f_dias'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', ()=>{ renderTravelSummary(); renderTicket(); });
+  document.getElementById(id).addEventListener('change', ()=>{ renderTravelSummary(); renderTicket(); });
+});
+
+$('#btnNew').addEventListener('click', ()=>{
+  if(!confirm('¿Iniciar una nueva cotización? Se perderán los cambios no guardados.')) return;
+  state.lines=[{std:"cat6a", puntos:24}]; state.pkgLines=[{std:"cat6a", paquete:25, puntosReales:25}]; state.addons={}; state.taxiTrips=[];
+  $('#f_cliente').value=''; $('#f_proyecto').value=''; $('#f_ubicacion').value=''; $('#f_desc').value=0; $('#f_dias').value=0; $('#f_zona').value='lima';
+  render();
+});
+
+// ---------- storage ----------
+async function loadConfig(){
+  try{
+    const r = await window.storage.get('config', false);
+    if(r && r.value){
+      const cfg = JSON.parse(r.value);
+      if(cfg.prices) state.prices = {...state.prices, ...cfg.prices};
+      if(cfg.pkg) state.pkg = {...state.pkg, ...cfg.pkg};
+      if(cfg.addonPrices) state.addonPrices = {...state.addonPrices, ...cfg.addonPrices};
+      if(cfg.zonas) state.zonas = {...state.zonas, ...cfg.zonas};
+      if(cfg.taxiApps) state.taxiApps = {...state.taxiApps, ...cfg.taxiApps};
+      if(cfg.seq) state.seq = cfg.seq;
+    }
+  }catch(e){}
+}
+async function saveConfig(){
+  try{ await window.storage.set('config', JSON.stringify({prices:state.prices, pkg:state.pkg, addonPrices:state.addonPrices, zonas:state.zonas, taxiApps:state.taxiApps, seq:state.seq}), false); }catch(e){ console.error(e); }
+}
+async function saveQuote(){
+  const t = computeTotals();
+  const code = `COT-DSX-${String(state.seq).padStart(4,'0')}`;
+  const record = {
+    code, cliente:$('#f_cliente').value, proyecto:$('#f_proyecto').value, ubicacion:$('#f_ubicacion').value,
+    escenario:$('#f_escenario').value, fecha:$('#f_fecha').value||new Date().toISOString().slice(0,10),
+    moneda:$('#f_moneda').value, modo:state.modo, lines:state.lines, pkgLines:state.pkgLines, addons:state.addons,
+    prices:state.prices, pkg:state.pkg, addonPrices:state.addonPrices, zona:$('#f_zona').value, dias:$('#f_dias').value,
+    zonas:state.zonas, taxiApps:state.taxiApps, taxiTrips:state.taxiTrips, desc:t.descPct, igv:t.igvPct, total:t.total, savedAt:new Date().toISOString(),
+  };
+  try{
+    await window.storage.set(`cotizaciones:${code}`, JSON.stringify(record), false);
+    state.seq += 1; await saveConfig(); toast(`Guardada como ${code}`); renderTicket();
+  }catch(e){ console.error(e); toast('Error al guardar'); }
+}
+$('#btnSave').addEventListener('click', saveQuote);
+
+async function openHistory(){
+  $('#histModal').classList.add('open');
+  const body = $('#histBody'); body.innerHTML = '<p class="empty-note">Cargando…</p>';
+  try{
+    const list = await window.storage.list('cotizaciones:', false);
+    if(!list || !list.keys || list.keys.length===0){ body.innerHTML = '<p class="empty-note">Aún no hay cotizaciones guardadas.</p>'; return; }
+    const items = [];
+    for(const k of list.keys){ try{ const r=await window.storage.get(k,false); if(r) items.push(JSON.parse(r.value)); }catch(e){} }
+    items.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
+    body.innerHTML = items.map(it=>`<div class="hist-item"><div class="hi"><b>${it.code}</b> — ${it.cliente||'Sin cliente'}<br><span class="d">${it.proyecto||''} · ${it.fecha||''} · ${it.moneda||'S/'} ${fmt(it.total)} · ${it.modo==='punto'?'por punto':'por paquete'}</span></div><div class="hist-actions"><button data-code="${it.code}" class="loadQ">Cargar</button><button data-code="${it.code}" class="delQ">Eliminar</button></div></div>`).join('');
+    body.querySelectorAll('.loadQ').forEach(b=>b.addEventListener('click', e=>loadQuote(items.find(x=>x.code===e.target.dataset.code))));
+    body.querySelectorAll('.delQ').forEach(b=>b.addEventListener('click', async e=>{ if(!confirm('¿Eliminar esta cotización?')) return; await window.storage.delete(`cotizaciones:${e.target.dataset.code}`, false); openHistory(); }));
+  }catch(e){ console.error(e); body.innerHTML='<p class="empty-note">No se pudo cargar el historial.</p>'; }
+}
+function loadQuote(rec){
+  if(!rec) return;
+  state.modo = rec.modo||'punto';
+  state.lines = rec.lines||[{std:"cat6a",puntos:24}];
+  state.pkgLines = rec.pkgLines||[{std:"cat6a",paquete:25,puntosReales:25}];
+  state.addons = rec.addons||{};
+  state.prices = {...state.prices, ...(rec.prices||{})};
+  state.pkg = {...state.pkg, ...(rec.pkg||{})};
+  state.addonPrices = {...state.addonPrices, ...(rec.addonPrices||{})};
+  state.zonas = {...state.zonas, ...(rec.zonas||{})};
+  state.taxiApps = {...state.taxiApps, ...(rec.taxiApps||{})};
+  state.taxiTrips = rec.taxiTrips || state.taxiTrips;
+  $('#f_cliente').value=rec.cliente||''; $('#f_proyecto').value=rec.proyecto||''; $('#f_ubicacion').value=rec.ubicacion||'';
+  $('#f_fecha').value=rec.fecha||''; $('#f_desc').value=rec.desc||0; $('#f_igv').value=rec.igv||18; $('#f_moneda').value=rec.moneda||'S/';
+  $('#f_zona').value=rec.zona||'lima'; $('#f_dias').value=rec.dias||0;
+  $('#modoPunto').classList.toggle('active', state.modo==='punto');
+  $('#modoPaquete').classList.toggle('active', state.modo==='paquete');
+  $('#lineTitle').textContent = state.modo==='punto'?'Líneas por punto':'Líneas por paquete';
+  $('#histModal').classList.remove('open');
+  render(); toast(`Cargada ${rec.code}`);
+}
+$('#btnHist').addEventListener('click', openHistory);
+$('#closeHist').addEventListener('click', ()=>$('#histModal').classList.remove('open'));
+$('#histModal').addEventListener('click', e=>{ if(e.target.id==='histModal') $('#histModal').classList.remove('open'); });
+
+// ---------- PDF (jsPDF nativo, sin html2canvas para evitar problemas de CORS/canvas) ----------
+function downloadPdf(){
+  const t = computeTotals();
+  const moneda = $('#f_moneda').value;
+  const code = `COT-DSX-${String(state.seq).padStart(4,'0')}`;
+  const fecha = $('#f_fecha').value || new Date().toISOString().slice(0,10);
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({unit:'pt', format:'a4'});
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const marginX = 40;
+  let y = 0;
+
+  function ensureSpace(h){ if(y+h > pageH-50){ pdf.addPage(); y=40; } }
+
+  // Header bar
+  pdf.setFillColor(20,23,28); pdf.rect(0,0,pageW,70,'F');
+  pdf.setFillColor(255,201,51); pdf.rect(0,70,pageW,3,'F');
+  pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+  pdf.text('COTIZACIÓN DE SERVICIOS', marginX, 32);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(9); pdf.setTextColor(180,184,190);
+  pdf.text('Certificación de puntos de datos · Fluke Networks DSX-8000', marginX, 48);
+  pdf.setTextColor(255,201,51); pdf.setFont('courier','bold'); pdf.setFontSize(12);
+  pdf.text(code, pageW-marginX, 32, {align:'right'});
+  pdf.setFont('courier','normal'); pdf.setFontSize(9); pdf.setTextColor(180,184,190);
+  pdf.text(fecha, pageW-marginX, 48, {align:'right'});
+  y = 92;
+
+  pdf.setTextColor(27,29,34); pdf.setFont('helvetica','normal'); pdf.setFontSize(10);
+  pdf.text(`Cliente: ${$('#f_cliente').value||'—'}`, marginX, y);
+  pdf.text(`Ubicación: ${$('#f_ubicacion').value||'—'}`, pageW/2, y);
+  y += 15;
+  pdf.text(`Proyecto: ${$('#f_proyecto').value||'—'}`, marginX, y);
+  pdf.text(`Escenario: ${$('#f_escenario').value}`, pageW/2, y);
+  y += 25;
+
+  function tableHeader(cols, widths){
+    ensureSpace(22);
+    pdf.setFillColor(20,23,28); pdf.rect(marginX, y, pageW-marginX*2, 20, 'F');
+    pdf.setTextColor(255,255,255); pdf.setFont('helvetica','bold'); pdf.setFontSize(9);
+    let x = marginX+8;
+    cols.forEach((c,i)=>{ pdf.text(c, x, y+13); x += widths[i]; });
+    y += 20;
+  }
+  function tableRow(vals, widths, alt){
+    ensureSpace(18);
+    if(alt){ pdf.setFillColor(251,250,247); pdf.rect(marginX, y, pageW-marginX*2, 18, 'F'); }
+    pdf.setTextColor(27,29,34); pdf.setFont('helvetica','normal'); pdf.setFontSize(9);
+    let x = marginX+8;
+    vals.forEach((v,i)=>{ pdf.text(String(v), x, y+12); x += widths[i]; });
+    pdf.setDrawColor(226,224,216); pdf.line(marginX, y+18, pageW-marginX, y+18);
+    y += 18;
+  }
+
+  const colsCert = ['Certificación','Detalle','Precio','Subtotal'];
+  const widthsCert = [180,160,90,90];
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(11); pdf.setTextColor(27,29,34);
+  pdf.text(`Certificaciones (modalidad: ${state.modo==='punto'?'por punto':'por paquete'})`, marginX, y); y+=8;
+  tableHeader(colsCert, widthsCert);
+  if(t.lineSubs.length===0){ tableRow(['—','','',''], widthsCert, false); }
+  t.lineSubs.forEach((l,i)=> tableRow([stdLabel(l.std), l.qtyLabel, `${moneda} ${fmt(l.price)}`, `${moneda} ${fmt(l.sub)}`], widthsCert, i%2===1));
+  y += 16;
+
+  if(t.addonList.length>0){
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    ensureSpace(30);
+    pdf.text('Pruebas y servicios especiales', marginX, y); y+=8;
+    tableHeader(['Servicio','Cant.','Precio','Subtotal'], widthsCert);
+    t.addonList.forEach((a,i)=> tableRow([a.label, String(a.qty), `${moneda} ${fmt(a.price)}`, `${moneda} ${fmt(a.sub)}`], widthsCert, i%2===1));
+    y += 16;
+  }
+
+  if(t.travel.total>0){
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(11);
+    ensureSpace(30);
+    pdf.text('Viáticos y traslado', marginX, y); y+=8;
+    tableHeader(['Concepto','Detalle','','Subtotal'], widthsCert);
+    tableRow(['Traslado y seguridad de equipo', t.travel.zonaLabel, '', `${moneda} ${fmt(t.travel.traslado)}`], widthsCert, false);
+    tableRow(['Viáticos', `${t.travel.dias} día(s)`, '', `${moneda} ${fmt(t.travel.viaticos)}`], widthsCert, true);
+    state.taxiTrips.forEach((tr,i)=>{
+      const a = state.taxiApps[tr.app]||state.taxiApps.otro;
+      tableRow([`Taxi ${a.label}${tr.nota?` — ${tr.nota}`:''}`, `${tr.km} km × ${tr.viajes} viaje(s)`, '', `${moneda} ${fmt(taxiTripCost(tr))}`], widthsCert, i%2===0);
+    });
+    y += 16;
+  }
+
+  ensureSpace(110);
+  const totX = pageW-marginX-220;
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(10); pdf.setTextColor(27,29,34);
+  pdf.text('Subtotal', totX, y); pdf.text(`${moneda} ${fmt(t.subtotal)}`, pageW-marginX, y, {align:'right'}); y+=16;
+  if(t.descPct>0){ pdf.text(`Descuento (${t.descPct}%)`, totX, y); pdf.text(`-${moneda} ${fmt(t.desc)}`, pageW-marginX, y, {align:'right'}); y+=16; }
+  pdf.text(`IGV (${t.igvPct}%)`, totX, y); pdf.text(`${moneda} ${fmt(t.igv)}`, pageW-marginX, y, {align:'right'}); y+=6;
+  pdf.setDrawColor(20,23,28); pdf.setLineWidth(1.2); pdf.line(totX, y+6, pageW-marginX, y+6); y+=22;
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(15);
+  pdf.text('TOTAL', totX, y); pdf.text(`${moneda} ${fmt(t.total)}`, pageW-marginX, y, {align:'right'});
+  y += 30;
+
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(140,140,140);
+  ensureSpace(20);
+  pdf.text(`Cotización válida por ${$('#f_validez').value||15} días desde la fecha de emisión. Precios referenciales, sujetos a confirmación de acceso al sitio.`, marginX, y, {maxWidth: pageW-marginX*2});
+
+  pdf.save(`${code}.pdf`);
+  toast('PDF descargado');
+}
+$('#btnPdf').addEventListener('click', ()=>{
+  try{ downloadPdf(); }catch(e){ console.error(e); toast('No se pudo generar el PDF'); }
+});
+
+// ---------- init ----------
+(async function init(){
+  $('#f_fecha').value = new Date().toISOString().slice(0,10);
+  await loadConfig();
+  render();
+})();
+</script>
+</body>
+</html>
