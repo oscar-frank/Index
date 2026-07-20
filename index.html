@@ -6,6 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 :root{
   --chassis:#14171C; --chassis-2:#1D2128;
@@ -147,7 +148,7 @@ details.pricecfg summary::before{content:"⚙";color:var(--yellow-dim)}
 <div class="wrap">
   <div class="left">
 
-    <div class="infobanner">El historial se guarda de forma persistente en tu cuenta (almacenamiento propio de este chat). Si prefieres una base de datos externa open source (Postgres vía Supabase, como en tus otras apps), puedo conectarla — solo necesito que crees el proyecto y me pases la URL y la anon key.</div>
+    <div class="infobanner">El historial se guarda en tu base de datos Supabase (proyecto Cotizador_CableadoDatos) — queda disponible para todo tu equipo desde cualquier dispositivo, no solo en este navegador.</div>
 
     <div class="card">
       <p class="eyebrow">Datos del proyecto</p>
@@ -287,6 +288,65 @@ const ZONA_DEFAULTS = {
   lima:{label:"Lima Metropolitana",traslado:0,viaticoDia:0},
   limaAlejada:{label:"Lima — zona alejada",traslado:350,viaticoDia:120},
   provincia:{label:"Provincia",traslado:900,viaticoDia:180},
+};
+
+// ---------- Conexión a Supabase (historial compartido con tu equipo) ----------
+const SUPABASE_URL = 'https://jrvxbmeuzifaqvpldwdj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_6f_NQyoGnTguobKJCtikOw_66uxgUDM';
+const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const db = {
+  async get(key){
+    if(key === 'config'){
+      const { data, error } = await supa.from('config').select('data').eq('id','default').maybeSingle();
+      if(error) throw error;
+      return data ? { value: JSON.stringify(data.data) } : null;
+    }
+    if(key.startsWith('cotizaciones:')){
+      const code = key.slice('cotizaciones:'.length);
+      const { data, error } = await supa.from('cotizaciones').select('data').eq('code', code).maybeSingle();
+      if(error) throw error;
+      return data ? { value: JSON.stringify(data.data) } : null;
+    }
+    return null;
+  },
+  async set(key, valueStr){
+    if(key === 'config'){
+      const parsed = JSON.parse(valueStr);
+      const { error } = await supa.from('config').upsert({ id:'default', data: parsed, updated_at: new Date().toISOString() });
+      if(error) throw error;
+      return { key, value: valueStr };
+    }
+    if(key.startsWith('cotizaciones:')){
+      const code = key.slice('cotizaciones:'.length);
+      const parsed = JSON.parse(valueStr);
+      const { error } = await supa.from('cotizaciones').upsert({
+        code, cliente: parsed.cliente||null, proyecto: parsed.proyecto||null,
+        ubicacion: parsed.ubicacion||null, escenario: parsed.escenario||null,
+        fecha: parsed.fecha||null, moneda: parsed.moneda||null,
+        total: parsed.total||0, data: parsed, saved_at: parsed.savedAt||new Date().toISOString()
+      });
+      if(error) throw error;
+      return { key, value: valueStr };
+    }
+    return null;
+  },
+  async delete(key){
+    if(key.startsWith('cotizaciones:')){
+      const code = key.slice('cotizaciones:'.length);
+      const { error } = await supa.from('cotizaciones').delete().eq('code', code);
+      if(error) throw error;
+    }
+    return { key, deleted:true };
+  },
+  async list(prefix){
+    if(prefix === 'cotizaciones:'){
+      const { data, error } = await supa.from('cotizaciones').select('code').order('saved_at', {ascending:false});
+      if(error) throw error;
+      return { keys: (data||[]).map(r=>`cotizaciones:${r.code}`) };
+    }
+    return { keys: [] };
+  }
 };
 // Tarifas de referencia (aprox.) de apps de taxi para orientar el costo de traslado seguro del equipo por ciudad.
 // Son valores editables — ajústalos a lo que cobren realmente en la zona de trabajo.
@@ -584,7 +644,7 @@ $('#btnNew').addEventListener('click', ()=>{
 // ---------- storage ----------
 async function loadConfig(){
   try{
-    const r = await window.storage.get('config', false);
+    const r = await db.get('config', false);
     if(r && r.value){
       const cfg = JSON.parse(r.value);
       if(cfg.prices) state.prices = {...state.prices, ...cfg.prices};
@@ -597,7 +657,7 @@ async function loadConfig(){
   }catch(e){}
 }
 async function saveConfig(){
-  try{ await window.storage.set('config', JSON.stringify({prices:state.prices, pkg:state.pkg, addonPrices:state.addonPrices, zonas:state.zonas, taxiApps:state.taxiApps, seq:state.seq}), false); }catch(e){ console.error(e); }
+  try{ await db.set('config', JSON.stringify({prices:state.prices, pkg:state.pkg, addonPrices:state.addonPrices, zonas:state.zonas, taxiApps:state.taxiApps, seq:state.seq}), false); }catch(e){ console.error(e); }
 }
 async function saveQuote(){
   const t = computeTotals();
@@ -610,7 +670,7 @@ async function saveQuote(){
     zonas:state.zonas, taxiApps:state.taxiApps, taxiTrips:state.taxiTrips, desc:t.descPct, igv:t.igvPct, total:t.total, savedAt:new Date().toISOString(),
   };
   try{
-    await window.storage.set(`cotizaciones:${code}`, JSON.stringify(record), false);
+    await db.set(`cotizaciones:${code}`, JSON.stringify(record), false);
     state.seq += 1; await saveConfig(); toast(`Guardada como ${code}`); renderTicket();
   }catch(e){ console.error(e); toast('Error al guardar'); }
 }
@@ -620,14 +680,14 @@ async function openHistory(){
   $('#histModal').classList.add('open');
   const body = $('#histBody'); body.innerHTML = '<p class="empty-note">Cargando…</p>';
   try{
-    const list = await window.storage.list('cotizaciones:', false);
+    const list = await db.list('cotizaciones:', false);
     if(!list || !list.keys || list.keys.length===0){ body.innerHTML = '<p class="empty-note">Aún no hay cotizaciones guardadas.</p>'; return; }
     const items = [];
-    for(const k of list.keys){ try{ const r=await window.storage.get(k,false); if(r) items.push(JSON.parse(r.value)); }catch(e){} }
+    for(const k of list.keys){ try{ const r=await db.get(k,false); if(r) items.push(JSON.parse(r.value)); }catch(e){} }
     items.sort((a,b)=>(b.savedAt||'').localeCompare(a.savedAt||''));
     body.innerHTML = items.map(it=>`<div class="hist-item"><div class="hi"><b>${it.code}</b> — ${it.cliente||'Sin cliente'}<br><span class="d">${it.proyecto||''} · ${it.fecha||''} · ${it.moneda||'S/'} ${fmt(it.total)} · ${it.modo==='punto'?'por punto':'por paquete'}</span></div><div class="hist-actions"><button data-code="${it.code}" class="loadQ">Cargar</button><button data-code="${it.code}" class="delQ">Eliminar</button></div></div>`).join('');
     body.querySelectorAll('.loadQ').forEach(b=>b.addEventListener('click', e=>loadQuote(items.find(x=>x.code===e.target.dataset.code))));
-    body.querySelectorAll('.delQ').forEach(b=>b.addEventListener('click', async e=>{ if(!confirm('¿Eliminar esta cotización?')) return; await window.storage.delete(`cotizaciones:${e.target.dataset.code}`, false); openHistory(); }));
+    body.querySelectorAll('.delQ').forEach(b=>b.addEventListener('click', async e=>{ if(!confirm('¿Eliminar esta cotización?')) return; await db.delete(`cotizaciones:${e.target.dataset.code}`, false); openHistory(); }));
   }catch(e){ console.error(e); body.innerHTML='<p class="empty-note">No se pudo cargar el historial.</p>'; }
 }
 function loadQuote(rec){
